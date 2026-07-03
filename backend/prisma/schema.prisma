@@ -1,0 +1,128 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  TENANT
+  OWNER
+  ADMIN
+}
+
+enum ListingStatus {
+  ACTIVE
+  FILLED
+}
+
+enum InterestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+enum ScoreSource {
+  LLM
+  FALLBACK
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role
+  isBanned     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  listings       Listing[]       @relation("OwnerListings")
+  tenantProfile  TenantProfile?
+  interestsSent  Interest[]      @relation("TenantInterests")
+  messagesSent   Message[]       @relation("SenderMessages")
+  notifications  Notification[]
+}
+
+model Listing {
+  id             String        @id @default(uuid())
+  owner          User          @relation("OwnerListings", fields: [ownerId], references: [id])
+  ownerId        String
+  location       String
+  rent           Int
+  availableFrom  DateTime
+  roomType       String
+  furnishing     String
+  photos         String[]      @default([])
+  status         ListingStatus @default(ACTIVE)
+  createdAt      DateTime      @default(now())
+
+  interests  Interest[]
+  scores     CompatibilityScore[]
+
+  @@index([location])
+  @@index([status])
+}
+
+model TenantProfile {
+  id                 String   @id @default(uuid())
+  user               User     @relation(fields: [userId], references: [id])
+  userId             String   @unique
+  preferredLocation  String
+  budgetMin          Int
+  budgetMax          Int
+  moveInDate         DateTime
+  updatedAt          DateTime @updatedAt
+
+  scores CompatibilityScore[]
+}
+
+model CompatibilityScore {
+  id            String      @id @default(uuid())
+  tenant        TenantProfile @relation(fields: [tenantId], references: [id])
+  tenantId      String
+  listing       Listing     @relation(fields: [listingId], references: [id])
+  listingId     String
+  score         Int
+  explanation   String
+  source        ScoreSource
+  createdAt     DateTime    @default(now())
+
+  @@unique([tenantId, listingId])
+}
+
+model Interest {
+  id         String         @id @default(uuid())
+  tenant     User           @relation("TenantInterests", fields: [tenantId], references: [id])
+  tenantId   String
+  listing    Listing        @relation(fields: [listingId], references: [id])
+  listingId  String
+  status     InterestStatus @default(PENDING)
+  createdAt  DateTime       @default(now())
+
+  messages Message[]
+
+  @@unique([tenantId, listingId])
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  interest   Interest @relation(fields: [interestId], references: [id])
+  interestId String
+  sender     User     @relation("SenderMessages", fields: [senderId], references: [id])
+  senderId   String
+  content    String
+  createdAt  DateTime @default(now())
+
+  @@index([interestId])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  type      String
+  payload   Json
+  sentAt    DateTime @default(now())
+}
