@@ -1,5 +1,6 @@
 # Keyhold — Rent & Flatmate Finder
-
+🔗 **Live app:** https://rent-flatmate-finder-five.vercel.app
+🔗 **Repository:** https://github.com/prafull069/rent-flatmate-finder
 An AI-powered platform where owners list rooms, tenants create "looking for room"
 profiles, and an LLM-driven compatibility engine scores and ranks matches. Once a
 tenant's interest is accepted, both parties get a real-time chat, and email
